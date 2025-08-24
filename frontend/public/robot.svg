@@ -1,0 +1,63 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 700" width="100%" height="auto" role="img" aria-label="LoKerja hero illustration — Notion-style robot with UI cards">
+  <!-- subtle grid -->
+  <g opacity="0.06" stroke="#111" stroke-width="2">
+    <!-- vertical -->
+    <g>
+      <path d="M60 0v700M120 0v700M180 0v700M240 0v700M300 0v700M360 0v700M420 0v700M480 0v700M540 0v700M600 0v700M660 0v700M720 0v700M780 0v700M840 0v700M900 0v700M960 0v700M1020 0v700M1080 0v700M1140 0v700"/>
+    </g>
+    <!-- horizontal -->
+    <g>
+      <path d="M0 60h1200M0 120h1200M0 180h1200M0 240h1200M0 300h1200M0 360h1200M0 420h1200M0 480h1200M0 540h1200M0 600h1200M0 660h1200"/>
+    </g>
+  </g>
+
+  <!-- RIGHT CLUSTER: UI cards + robot (closer & larger) -->
+  <!-- UI cards -->
+  <g transform="translate(710,210)" stroke="#111" stroke-width="8" stroke-linecap="round" stroke-linejoin="round">
+    <!-- big card -->
+    <rect x="0" y="0" width="190" height="110" rx="14" fill="#fff"/>
+    <path d="M22 42h90M22 70h130" fill="none"/>
+    <circle cx="164" cy="26" r="9" fill="#2EC4B6" stroke="#111" stroke-width="7"/>
+    <!-- mid card -->
+    <rect x="28" y="128" width="150" height="90" rx="12" fill="#fff"/>
+    <path d="M48 166h90M48 192h60" fill="none"/>
+    <!-- small tag -->
+    <rect x="-4" y="92" width="80" height="42" rx="10" fill="#fff"/>
+    <!-- accents -->
+    <circle cx="186" cy="192" r="7" fill="#FFD803" stroke="#111" stroke-width="6"/>
+  </g>
+
+  <!-- Robot (Notion-ish mono-line) -->
+  <g transform="translate(890,160)" stroke="#111" stroke-width="10" stroke-linecap="round" stroke-linejoin="round">
+    <!-- antenna -->
+    <line x1="80" y1="14" x2="80" y2="-6" />
+    <circle cx="80" cy="-10" r="14" fill="#FFD803" stroke="#111" stroke-width="8"/>
+    <!-- head -->
+    <rect x="30" y="20" width="100" height="80" rx="18" fill="#fff"/>
+    <!-- eyes -->
+    <circle cx="55" cy="62" r="9" fill="#111"/>
+    <circle cx="105" cy="62" r="9" fill="#111"/>
+    <!-- smile -->
+    <path d="M52 86q28 16 56 0" fill="none"/>
+    <!-- shoulders / arms -->
+    <path d="M20 132q-18 20 0 40" fill="none"/>
+    <path d="M140 132q18 20 0 40" fill="none"/>
+    <!-- body -->
+    <rect x="10" y="120" width="140" height="160" rx="22" fill="#fff"/>
+    <!-- panel on body -->
+    <rect x="45" y="160" width="70" height="54" rx="10" fill="#fff"/>
+    <path d="M58 186h44M58 206h34" fill="none"/>
+    <!-- legs -->
+    <path d="M58 282v40M102 282v40" />
+    <rect x="34" y="322" width="52" height="14" rx="6" fill="#111"/>
+    <rect x="92" y="322" width="52" height="14" rx="6" fill="#111"/>
+    <!-- small accent on shoulder -->
+    <path d="M140 152l18 14-18 14" fill="#8338EC"/>
+  </g>
+
+  <!-- LEFT SAFE AREA GUIDE (invisible) to align with text column on hero; remove if desired -->
+  <rect x="80" y="120" width="560" height="340" fill="none" stroke="none"/>
+
+  <!-- Note: composition scaled for responsiveness; set container width via CSS (e.g., max-width) -->
+</svg>
+
