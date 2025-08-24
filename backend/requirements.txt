@@ -1,0 +1,14 @@
+openai>=1.40.0
+python-dotenv
+pymupdf
+pdfminer.six
+tenacity
+pydantic
+fastapi
+uvicorn
+python-multipart
+python-jobspy
+numpy
+pandas
+httpx
+apscheduler
