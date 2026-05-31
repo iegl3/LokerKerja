@@ -242,7 +242,7 @@ function createStore() {
                     company: j.company,
                     location: j.location,
                     url: j.job_url,
-                    matchPct: Math.round(m.match_percentage ?? 0),
+                    matchPct: typeof m.match_percentage === 'number' ? Math.round(m.match_percentage) : undefined,
                     job_type: j.job_type,
                     is_remote: j.is_remote,
                     salary_text: salaryText(j),

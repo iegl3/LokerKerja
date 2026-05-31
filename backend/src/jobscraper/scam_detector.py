@@ -5,7 +5,7 @@ from typing import List, Dict, Any, Optional
 from pydantic import BaseModel, Field
 from enum import Enum
 
-from cv_handler.config import LUNOS, SEM_LUNOS
+from cv_handler.config import LUNOS, SEM_LUNOS, TEXT_MODEL
 from .scraper import JobResult
 
 logger = logging.getLogger(__name__)
@@ -265,13 +265,13 @@ Keep response concise and professional.
 """
 
             response = await LUNOS.chat.completions.create(
-                model="openai/gpt-4o-mini",
+                model=TEXT_MODEL,
                 messages=[{"role": "user", "content": prompt}],
                 max_tokens=300,
                 temperature=0.1
             )
             
-            return response.choices[0].message.content.strip()
+            return (response.choices[0].message.content or "").strip()
             
         except Exception as e:
             logger.error(f"LLM analysis error: {e}")

@@ -2,7 +2,9 @@ import os
 import hmac
 import hashlib
 import httpx
+import smtplib
 from typing import Optional, List, Dict, Any
+from email.message import EmailMessage
 from tenacity import retry, wait_exponential, stop_after_attempt
 import logging
 from datetime import datetime, timedelta
@@ -66,6 +68,42 @@ def _get_sender_email_id() -> str:
 def _get_webhook_secret() -> str:
     return os.getenv("MAILRY_WEBHOOK_SECRET", "")
 
+async def _send_smtp_email(
+    to: str,
+    subject: str,
+    text: str,
+    html: Optional[str] = None,
+) -> Dict[str, Any]:
+    smtp_host = os.getenv("SMTP_HOST", "")
+    smtp_from = os.getenv("SMTP_FROM_EMAIL", "")
+    if not smtp_host or not smtp_from:
+        raise ValueError("SMTP_HOST and SMTP_FROM_EMAIL must be configured")
+
+    msg = EmailMessage()
+    msg["Subject"] = subject
+    from_name = os.getenv("SMTP_FROM_NAME", "LokerKerja")
+    msg["From"] = f"{from_name} <{smtp_from}>"
+    msg["To"] = to
+    msg.set_content(text)
+    if html:
+        msg.add_alternative(html, subtype="html")
+
+    def send_blocking() -> None:
+        port = int(os.getenv("SMTP_PORT", "587"))
+        use_tls = os.getenv("SMTP_USE_TLS", "true").lower() == "true"
+        username = os.getenv("SMTP_USERNAME", "")
+        password = os.getenv("SMTP_PASSWORD", "")
+        with smtplib.SMTP(smtp_host, port, timeout=30) as smtp:
+            if use_tls:
+                smtp.starttls()
+            if username and password:
+                smtp.login(username, password)
+            smtp.send_message(msg)
+
+    import asyncio
+    await asyncio.to_thread(send_blocking)
+    return {"message": "Email sent", "provider": "smtp"}
+
 
 @retry(wait=wait_exponential(min=1, max=8), stop=stop_after_attempt(3))
 async def list_sender_emails() -> Dict[str, Any]:
@@ -111,7 +149,10 @@ async def send_email(
     sender_email_id: Optional[str] = None,
     attachments: Optional[List[Dict[str, str]]] = None,
 ) -> Dict[str, Any]:
-    """Send email via Mailry"""
+    """Send email via configured provider (SMTP default, Mailry fallback)."""
+    if os.getenv("EMAIL_PROVIDER", "smtp").lower() == "smtp":
+        return await _send_smtp_email(to=to, subject=subject, text=text, html=html)
+
     api_key = _get_api_key()
     if not api_key:
         raise ValueError("MAILRY_API_KEY not configured")
@@ -404,7 +445,7 @@ async def send_welcome_subscription_email(
     user_name: str,
     position_title: str,
     frequency: str,
-    jobs: List[Dict[str, Any]] = None,
+    jobs: Optional[List[Dict[str, Any]]] = None,
     top_n: int = 5
 ) -> Dict[str, Any]:
     """Send welcome email for new subscription with optional job samples"""
