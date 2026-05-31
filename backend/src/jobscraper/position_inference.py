@@ -3,7 +3,7 @@ import logging
 from typing import List, Dict, Any, Optional
 from pydantic import BaseModel, Field
 
-from cv_handler.config import LUNOS, SEM_LUNOS
+from cv_handler.config import LUNOS, SEM_LUNOS, TEXT_MODEL
 
 logger = logging.getLogger(__name__)
 
@@ -193,7 +193,7 @@ async def infer_position_from_cv(
     async with SEM_LUNOS:
         try:
             response = await LUNOS.chat.completions.create(
-                model="openai/gpt-4o-mini",
+                model=TEXT_MODEL,
                 messages=[{"role": "user", "content": prompt}],
                 max_tokens=300,
                 temperature=0.1,

@@ -86,7 +86,7 @@ class CVProfile(BaseModel):
     schema_version: str = Field("1.0", description="Profile schema version")
     source: str = Field("cv_upload", description="Data source")
     name: Optional[str] = Field(None, description="Full name")
-    contacts: ContactInfo = Field(default_factory=ContactInfo, description="Contact information")
+    contacts: ContactInfo = Field(default_factory=ContactInfo.model_construct, description="Contact information")
     summary: Optional[str] = Field(None, description="Professional summary")
     skills: List[str] = Field(default_factory=list, description="Skills list")
     experience: List[Experience] = Field(default_factory=list, description="Work experience")
@@ -441,6 +441,8 @@ async def parse_cv(
         )
 
     req_id = str(uuid.uuid4())
+    profile: Dict[str, Any] = {}
+    meta: Dict[str, Any] = {}
 
     try:
         profile, meta, flags = await read_cv_from_bytes_async(
@@ -619,7 +621,7 @@ async def smart_discovery(
             continue
 
     # Deduplicate by URL
-    seen: set = set()
+    seen: set[str] = set()
     unique_jobs: List[JobResult] = []
     for j in aggregated_jobs:
         key = j.job_url or f"{j.title}|{j.company}|{j.location}"
@@ -637,28 +639,30 @@ async def smart_discovery(
         except Exception as e:
             print(f"DEBUG - Matching failed: {e}, showing all jobs")
             # Fallback: show all jobs without matching
-            jobs_to_show = [{"job": job, "similarity_score": 0.5, "match_percentage": 50.0, "match_reasons": ["Job found by keyword search"]} for job in unique_jobs[:top_matches]]
+            jobs_to_show = [{"job": job, "similarity_score": None, "match_percentage": None, "match_reasons": ["Job found by inferred keyword search"]} for job in unique_jobs[:top_matches]]
     else:
         # Show all jobs without matching
-        jobs_to_show = [{"job": job, "similarity_score": 0.5, "match_percentage": 50.0, "match_reasons": ["Job found by keyword search"]} for job in unique_jobs[:top_matches]]
+        jobs_to_show = [{"job": job, "similarity_score": None, "match_percentage": None, "match_reasons": ["Job found by inferred keyword search"]} for job in unique_jobs[:top_matches]]
         print(f"DEBUG - AI matching disabled: showing {len(jobs_to_show)} jobs")
 
     # Step 4: Optional scam detection
-    enhanced_matches = []
+    enhanced_matches: List[Dict[str, Any]] = []
     if include_scam_check and jobs_to_show:
         try:
-            job_objects = [m["job"] if isinstance(m, dict) else m.job for m in jobs_to_show]
+            normalized_matches: List[Dict[str, Any]] = [m if isinstance(m, dict) else m.model_dump() for m in jobs_to_show]
+            job_objects = [m["job"] for m in normalized_matches]
             scams = await detect_scam_batch(job_objects)
-            for m, s in zip(jobs_to_show, scams):
-                if isinstance(m, dict):
-                    enhanced_matches.append({**m, "scam_result": s.model_dump()})
-                else:
-                    enhanced_matches.append({**m.model_dump(), "scam_result": s.model_dump()})
+            for m, s in zip(normalized_matches, scams):
+                enhanced_matches.append({**m, "scam_result": s.model_dump()})
         except Exception as e:
             print(f"DEBUG - Scam detection failed: {e}")
-            enhanced_matches = [m.model_dump() if hasattr(m, 'model_dump') else m for m in jobs_to_show]
+            enhanced_matches = []
+            for m in jobs_to_show:
+                enhanced_matches.append(m if isinstance(m, dict) else m.model_dump())
     else:
-        enhanced_matches = [m.model_dump() if hasattr(m, 'model_dump') else m for m in jobs_to_show]
+        enhanced_matches = []
+        for m in jobs_to_show:
+            enhanced_matches.append(m if isinstance(m, dict) else m.model_dump())
 
     return {
         "inference": inf.model_dump(),
@@ -1026,7 +1030,7 @@ async def mailry_webhook(request: Request, x_mailry_signature: str = Header(None
         raise HTTPException(status_code=500, detail=f"Webhook processing failed: {str(e)}")
 
 
-async def _handle_email_reply(data: dict):
+async def _handle_email_reply(data: Dict[str, Any]):
     """Handle email reply webhook from Mailry"""
     try:
         # Extract reply information
@@ -1150,7 +1154,7 @@ Tim LokerKerja
         logger.error(f"Failed to send unsubscribe confirmation: {e}")
 
 
-async def _handle_email_bounce(data: dict):
+async def _handle_email_bounce(data: Dict[str, Any]):
     """Handle email bounce webhook from Mailry"""
     try:
         bounce_to = data.get("bounce_to", "")
@@ -1438,8 +1442,8 @@ async def subscription_dashboard():
           tags=["Jobs", "AI"])
 async def smart_discovery_with_email(
     background_tasks: BackgroundTasks,
-    cv_profile: dict = None,
-    position_inference: dict = None,
+    cv_profile: Optional[Dict[str, Any]] = None,
+    position_inference: Optional[Dict[str, Any]] = None,
     email_to: str = Query(None, description="Email address to send results to"),
     user_name: str = Query(None, description="User name for email"),
     location: str = Query("Indonesia", description="Job search location"),
@@ -1453,15 +1457,11 @@ async def smart_discovery_with_email(
     alert_frequency: FrequencyType = Query(FrequencyType.WEEKLY, description="Alert frequency")
 ):
     """Enhanced smart discovery with email and subscription options"""
+    start_time = time.perf_counter()
     
     # Run the regular smart discovery
     try:
-        # Use the existing smart-discovery logic
-        from api.main import app as current_app
-        
         # Call the existing endpoint logic (simplified)
-        start_time = time.perf_counter()
-        
         if not cv_profile:
             raise HTTPException(status_code=400, detail="cv_profile is required")
         
@@ -1471,9 +1471,16 @@ async def smart_discovery_with_email(
                 cv_profile=cv_profile,
                 top_alternates=2,
                 allow_freshgrad_bias=True,
-                language=language
+                language=language,
+                user_preferences=None,
             )
-            position_inference_result = await infer_position_from_cv(inference_request)
+            position_inference_result = await infer_position_from_cv(
+                cv_profile=inference_request.cv_profile,
+                top_alternates=inference_request.top_alternates,
+                allow_freshgrad_bias=inference_request.allow_freshgrad_bias,
+                language=inference_request.language,
+                user_preferences=inference_request.user_preferences,
+            )
             position_inference = position_inference_result.model_dump()
         else:
             print(f"DEBUG - Using provided position_inference: {position_inference}")
@@ -1569,8 +1576,8 @@ async def smart_discovery_with_email(
                 # AI matching
                 match_request = JobMatchRequest(
                     cv_profile=cv_profile,
-                    jobs=[job.model_dump() for job in search_response.jobs],
-                    top_n=top_matches
+                    jobs=search_response.jobs,
+                    top_k=top_matches
                 )
                 match_response = await match_cv_to_jobs(match_request)
                 enhanced_matches = [match.model_dump() for match in match_response.matches]
@@ -1582,7 +1589,7 @@ async def smart_discovery_with_email(
         
         processing_time = (time.perf_counter() - start_time) * 1000
         
-        result = {
+        result: Dict[str, Any] = {
             "matches": enhanced_matches,
             "search_summary": {
                 "total_jobs_found": search_response.total_found,

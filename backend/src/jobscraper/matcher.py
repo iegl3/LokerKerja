@@ -4,7 +4,7 @@ import numpy as np
 from typing import List, Dict, Any, Optional, Tuple
 from pydantic import BaseModel, Field
 
-from cv_handler.config import LUNOS, SEM_LUNOS
+from cv_handler.config import EMBEDDING_MODEL, LUNOS, SEM_LUNOS
 from .scraper import JobResult
 
 logger = logging.getLogger(__name__)
@@ -49,7 +49,7 @@ async def get_embedding_async(text: str) -> List[float]:
             clean_text = text.strip()[:4000]  # Reduced from 8000
             
             response = await LUNOS.embeddings.create(
-                model="google/gemini-embedding-001",
+                model=EMBEDDING_MODEL,
                 input=clean_text
             )
             
